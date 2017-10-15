@@ -1,9 +1,9 @@
 === FAN Control
 
-I found the sample project from http://www.electroschematics.com/9540/arduino-fan-speed-controlled-temperature/ and
-build it three times for three different controled fans and thermo sensors.
+I found the basic project at http://www.electroschematics.com/9540/arduino-fan-speed-controlled-temperature/ and
+build the hardware three times for three separate controled fans with thermo sensors.
 
-This is the shematics from the original page
+This is the shematics from the basic project
 
 IMAGE docu/arduino-temperature-fan-speed-control.png
 
