@@ -1,4 +1,5 @@
-//source: http://www.electroschematics.com/9540/arduino-fan-speed-controlled-temperature/
+#include <EEPROM.h>
+#define EE_VERSION 1
 
 int tempPin0 = A1;   // the output pin of LM35
 int tempPin1 = A2;   // the output pin of LM35
@@ -31,10 +32,88 @@ double tempMul = 0.48828125;
 float tempAdd = 0;
 String inputString = "";
 boolean stringComplete = false;
-boolean monitor = false;
+boolean monitorOn = false;
 boolean warn = false;
 int testWarn = 20;
 long alerts = 0;
+boolean serialEcho = true;
+
+void load() {
+  int a = 0;
+  int xversion = 0;
+  EEPROM.get(a, xversion);
+  if (xversion != EE_VERSION) {
+    Serial.print("*** Can't load from EEPROM, wrong version ");
+    Serial.print(xversion);
+    Serial.print(" expected version ");
+    Serial.println(EE_VERSION);
+    return;
+  }
+  a=a+sizeof(xversion);
+  EEPROM.get(a,active0);
+  a=a+sizeof(active0);
+  EEPROM.get(a,active1);
+  a=a+sizeof(active1);
+  EEPROM.get(a,active2);
+  a=a+sizeof(active2);
+  EEPROM.get(a,fanAdd);
+  a=a+sizeof(fanAdd);
+  EEPROM.get(a,fanSleep);
+  a=a+sizeof(fanSleep);
+  EEPROM.get(a,tempMin);
+  a=a+sizeof(tempMin);
+  EEPROM.get(a,tempMax);
+  a=a+sizeof(tempMax);
+  EEPROM.get(a,tempMul);
+  a=a+sizeof(tempMul);
+  EEPROM.get(a,tempAdd);
+  a=a+sizeof(tempAdd);
+  EEPROM.get(a,delayTime);
+  a=a+sizeof(delayTime);
+  EEPROM.get(a,serialEcho);
+  a=a+sizeof(serialEcho);
+  EEPROM.get(a,monitorOn);
+  a=a+sizeof(monitorOn);
+    
+}
+
+void configClean() {
+  int a = 0;
+  int xversion = 0;
+  EEPROM.put(a, xversion);
+}
+
+void save() {
+  int a = 0;
+  int xversion = EE_VERSION;
+  EEPROM.put(a, xversion);
+  a=a+sizeof(xversion);
+  EEPROM.put(a,active0);
+  a=a+sizeof(active0);
+  EEPROM.put(a,active1);
+  a=a+sizeof(active1);
+  EEPROM.put(a,active2);
+  a=a+sizeof(active2);
+  EEPROM.put(a,fanAdd);
+  a=a+sizeof(fanAdd);
+  EEPROM.put(a,fanSleep);
+  a=a+sizeof(fanSleep);
+  EEPROM.put(a,tempMin);
+  a=a+sizeof(tempMin);
+  EEPROM.put(a,tempMax);
+  a=a+sizeof(tempMax);
+  EEPROM.put(a,tempMul);
+  a=a+sizeof(tempMul);
+  EEPROM.put(a,tempAdd);
+  a=a+sizeof(tempAdd);
+  EEPROM.put(a,delayTime);
+  a=a+sizeof(delayTime);
+  EEPROM.put(a,serialEcho);
+  a=a+sizeof(serialEcho);
+  EEPROM.put(a,monitorOn);
+  a=a+sizeof(monitorOn);
+  
+}
 
 void setup() {
   pinMode(fan0, OUTPUT);
@@ -52,6 +131,8 @@ void setup() {
   
   Serial.begin(9600);
   inputString.reserve(200);
+
+  load();
 }
 
 void(* resetFunc) (void) = 0; //declare reset function @ address 0
@@ -132,6 +213,9 @@ void loop() {
      int pos = inputString.indexOf('=');
      if (pos < 0) {
        // command
+       if (inputString == "") {
+         // ignore empty lines
+       } else
        if (inputString == "sensor") {
          Serial.print("tempMul:");
          Serial.print(tempMul);
@@ -154,8 +238,20 @@ void loop() {
         Serial.print("delay:");
         Serial.println(delayTime);
        } else
-       if (inputString == "clean") {
+       if (inputString == "alerts.clean") {
         alerts = 0;
+        Serial.println("ok");
+       } else
+       if (inputString == "config.save") {
+        save();
+        Serial.println("ok");
+       } else
+       if (inputString == "config.load") {
+        load();
+        Serial.println("ok");
+       } else
+       if (inputString == "config.clean") {
+        configClean();
         Serial.println("ok");
        } else
        if (inputString == "uptime") {
@@ -218,7 +314,7 @@ void loop() {
          Serial.println("ok");
        } else
        if (key == "monitor") {
-         monitor = val == "true";
+         monitorOn = val == "true";
          Serial.println("ok");
        } else
        if (key == "active0") {
@@ -236,6 +332,10 @@ void loop() {
          digitalWrite(fan2, LOW);
          Serial.println("ok");
        } else
+       if (key == "serialEcho") {
+         serialEcho = val == "true";
+         Serial.println("ok");
+       } else
        if (key == "delay") {
          delayTime = val.toInt();
          if (delayTime < 200) delayTime = 200;
@@ -248,7 +348,7 @@ void loop() {
      inputString = "";
      stringComplete = false;
    }
-   if (monitor) {
+   if (monitorOn) {
      printStatus();
    }   
 
@@ -302,6 +402,8 @@ void serialEvent() {
     } else {
       inputString += inChar;
     }
+    if (serialEcho)
+      Serial.print(inChar);
     // if the incoming character is a newline, set a flag so the main loop can
     // do something about it:
   }

@@ -31,9 +31,12 @@ sensor - Print therm settings tempMul and tempAdd, they are used to adjust therm
 boundaries - Print current tempMin and tempMax
 fan - Print fan optimization settings fanAdd and fanSleep, they are used to adjust fan speed
 delay - Print delay time in milliseconds between cycles
-clean - Cleanup alert counter
+alerts.clean - Cleanup alert counter
 uptime - Print human readable uptime
 reset - Restart the device
+config.save - Save the settings into the eeprom
+config.load - Load the settings from eeprom (also done on startup)
+config.clean - Delete the settings from eeprom, after restart the default settings are set
 
 Settings:
 
