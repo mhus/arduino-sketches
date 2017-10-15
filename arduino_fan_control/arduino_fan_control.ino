@@ -33,6 +33,8 @@ String inputString = "";
 boolean stringComplete = false;
 boolean monitor = false;
 boolean warn = false;
+int testWarn = 20;
+long alerts = 0;
 
 void setup() {
   pinMode(fan0, OUTPUT);
@@ -99,8 +101,15 @@ void loop() {
    }
 
    warn = false;
-   if(temp0  > tempMax || temp1 > tempMax || temp2 > tempMax) {        // if temp is higher than tempMax
+   if(testWarn > 0 || temp0  > tempMax || temp1 > tempMax || temp2 > tempMax) {        // if temp is higher than tempMax
+    if (testWarn == 0) alerts++;
      warn = true;
+     if (active0) fanSpeed0=255;
+     if (active1) fanSpeed1=255;
+     if (active2) fanSpeed2=255;
+     testWarn--;
+     if (testWarn < 0) testWarn = 0;
+     if (alerts > 100000) alerts = 100000;
    }
    
    if (fanSpeed0 == 0) {
@@ -145,23 +154,33 @@ void loop() {
         Serial.print("delay:");
         Serial.println(delayTime);
        } else
+       if (inputString == "clean") {
+        alerts = 0;
+        Serial.println("ok");
+       } else
+       if (inputString == "uptime") {
+        Serial.print("uptime:");
+        long now = millis() / 1000; // in seconds
+        long sec = now % 60;
+        now = now / 60;
+        long minutes = now % 60;
+        now = now / 60;
+        long hours = now % 24;
+        now = now / 24;
+        Serial.print(now);
+        Serial.print("t ");
+        Serial.print(hours);
+        Serial.print("h ");
+        Serial.print(minutes);
+        Serial.print("m ");
+        Serial.print(sec);
+        Serial.println("s");
+       } else
        if (inputString == "reset") {
          resetFunc();  //call reset
        } else
        if (inputString == "status") {
-         Serial.print("TEMP0:");
-         Serial.print(temp0);
-         Serial.print(",FAN0:");
-         Serial.print(fanSpeed0);
-         Serial.print(",TEMP1:");
-         Serial.print(temp1);
-         Serial.print(",FAN1:");
-         Serial.print(fanSpeed1);
-         Serial.print(",TEMP2:");
-         Serial.print(temp2);
-         Serial.print(",FAN2:");
-         Serial.print(fanSpeed2);
-         Serial.println();
+         printStatus();
        } else {
         Serial.print("unknown cmd:");
         Serial.println(inputString);
@@ -192,6 +211,10 @@ void loop() {
        } else
        if (key == "fanSleep") {
          fanSleep = val.toInt();
+         Serial.println("ok");
+       } else
+       if (key == "testWarn") {
+         testWarn = val.toInt();
          Serial.println("ok");
        } else
        if (key == "monitor") {
@@ -226,19 +249,7 @@ void loop() {
      stringComplete = false;
    }
    if (monitor) {
-         Serial.print("TEMP0:");
-         Serial.print(temp0);
-         Serial.print(",FAN0:");
-         Serial.print(fanSpeed0);
-         Serial.print(",TEMP1:");
-         Serial.print(temp1);
-         Serial.print(",FAN1:");
-         Serial.print(fanSpeed1);
-         Serial.print(",TEMP2:");
-         Serial.print(temp2);
-         Serial.print(",FAN2:");
-         Serial.print(fanSpeed2);
-         Serial.println();
+     printStatus();
    }   
 
    digitalWrite(led, ledOn ? HIGH : LOW); 
@@ -251,6 +262,29 @@ void loop() {
    ledOn = !ledOn;
    delay(delayTime);
 }
+
+void printStatus() {
+  Serial.print("TEMP0:");
+  Serial.print(temp0);
+  Serial.print(",FAN0:");
+  Serial.print(fanSpeed0);
+  Serial.print(",TEMP1:");
+  Serial.print(temp1);
+  Serial.print(",FAN1:");
+  Serial.print(fanSpeed1);
+  Serial.print(",TEMP2:");
+  Serial.print(temp2);
+  Serial.print(",FAN2:");
+  Serial.print(fanSpeed2);
+  Serial.print(",WARN:");
+  Serial.print(warn);
+  Serial.print("/");
+  Serial.print(testWarn);
+  Serial.print(",ALERTS:");
+  Serial.print(alerts);
+  Serial.println();
+}
+
  
 int readTemp(int pin) {  // get the temperature and convert it to celsius
   int temp = analogRead(pin);
