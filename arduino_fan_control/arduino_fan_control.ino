@@ -37,6 +37,7 @@ boolean warn = false;
 int testWarn = 20;
 long alerts = 0;
 boolean serialEcho = true;
+String prompt = "fancontrol";
 
 void load() {
   int a = 0;
@@ -74,7 +75,8 @@ void load() {
   a=a+sizeof(serialEcho);
   EEPROM.get(a,monitorOn);
   a=a+sizeof(monitorOn);
-    
+  EEPROM.get(a,prompt);
+  a=a+sizeof(monitorOn);
 }
 
 void configClean() {
@@ -112,6 +114,8 @@ void save() {
   a=a+sizeof(serialEcho);
   EEPROM.put(a,monitorOn);
   a=a+sizeof(monitorOn);
+  EEPROM.put(a,prompt);
+  a=a+sizeof(prompt);
   
 }
 
@@ -133,6 +137,9 @@ void setup() {
   inputString.reserve(200);
 
   load();
+
+  printPrompt();
+
 }
 
 void(* resetFunc) (void) = 0; //declare reset function @ address 0
@@ -345,6 +352,7 @@ void loop() {
         Serial.println(inputString);
        }
      }
+     printPrompt();
      inputString = "";
      stringComplete = false;
    }
@@ -363,6 +371,12 @@ void loop() {
    delay(delayTime);
 }
 
+void printPrompt() {
+  if (monitorOn || !serialEcho) return;
+  Serial.print(prompt);
+  Serial.print("$ ");
+
+}
 void printStatus() {
   Serial.print("TEMP0:");
   Serial.print(temp0);
@@ -385,7 +399,6 @@ void printStatus() {
   Serial.println();
 }
 
- 
 int readTemp(int pin) {  // get the temperature and convert it to celsius
   int temp = analogRead(pin);
   return temp * tempMul + tempAdd;
@@ -397,13 +410,15 @@ void serialEvent() {
     // get the new byte:
     char inChar = (char)Serial.read();
     // add it to the inputString:
-    if (inChar == '\n' || inChar == ';') {
+    if (inChar == '\n' || inChar == ';' || inChar == '\r') {
       stringComplete = true;
     } else {
       inputString += inChar;
     }
-    if (serialEcho)
+    if (serialEcho) {
       Serial.print(inChar);
+      if (inChar == '\r') Serial.print('\n');
+    }
     // if the incoming character is a newline, set a flag so the main loop can
     // do something about it:
   }
