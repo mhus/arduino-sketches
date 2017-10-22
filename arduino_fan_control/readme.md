@@ -1,9 +1,9 @@
 === FAN Control
 
 I found the basic project at http://www.electroschematics.com/9540/arduino-fan-speed-controlled-temperature/ and
-build the hardware three times for three separate controled fans with thermo sensors.
+build the hardware three times for three separate controlled fans with thermo sensors.
 
-This is the shematics from the basic project
+This is the schematics from the basic project
 
 IMAGE docu/arduino-temperature-fan-speed-control.png
 
@@ -12,12 +12,12 @@ Thanks to "Electro Schematics" for the project!
 I removed the LCD display and extended the software using serial communication
 to have more control of the fan device.
 
-If you connect a USB serial to the device you can send commands and settings to the controler.
+If you connect a USB serial to the device you can send commands and settings to the controller.
 
 Fan speed value is between 0 and 255. Values lesser then 30 will fans cause not to run correctly because of
 the low voltage. To avoid it set fanAdd setting.
 
-If you want the fan also to run for low themeratures set fanSleep.
+If you want the fan also to run for low themperatures set fanSleep.
 
 The alert led will blink for every cycle. If alerting the led will be permanently on.
 
@@ -27,10 +27,7 @@ Settings consists of key=value everything else are commands. Send a enter or sem
 Commands:
 
 status - Print status of all thermo sensors and fans, alert count and test alert counter
-sensor - Print therm settings tempMul and tempAdd, they are used to adjust thermal sensor 
-boundaries - Print current tempMin and tempMax
-fan - Print fan optimization settings fanAdd and fanSleep, they are used to adjust fan speed
-delay - Print delay time in milliseconds between cycles
+config - Print the full configuration
 alerts.clean - Cleanup alert counter
 uptime - Print human readable uptime
 reset - Restart the device
@@ -58,6 +55,5 @@ active2:Boolean - Enable/Disable fan2 (default true)
 
 delay:Int - Set delay time between cycles in milliseconds
 
-
-
+synchronise:Boolean - Enable to tun all fans with the same (maximum of all) speed
 

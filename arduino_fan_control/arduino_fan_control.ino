@@ -1,5 +1,5 @@
 #include <EEPROM.h>
-#define EE_VERSION 1
+#define EE_VERSION 2
 
 int tempPin0 = A1;   // the output pin of LM35
 int tempPin1 = A2;   // the output pin of LM35
@@ -37,13 +37,14 @@ boolean warn = false;
 int testWarn = 20;
 long alerts = 0;
 boolean serialEcho = true;
-String prompt = "fancontrol";
+String prompt = "fancontrol$ ";
+boolean synchronise = false;
 
 void load() {
   int a = 0;
   int xversion = 0;
   EEPROM.get(a, xversion);
-  if (xversion != EE_VERSION) {
+  if (xversion < 1 || xversion > EE_VERSION) {
     Serial.print("*** Can't load from EEPROM, wrong version ");
     Serial.print(xversion);
     Serial.print(" expected version ");
@@ -75,8 +76,15 @@ void load() {
   a=a+sizeof(serialEcho);
   EEPROM.get(a,monitorOn);
   a=a+sizeof(monitorOn);
+  if (xversion < 2) {
+    Serial.print("--- Please config.save, old configuration found");
+    return;
+  }
   EEPROM.get(a,prompt);
   a=a+sizeof(monitorOn);
+  EEPROM.get(a,synchronise);
+  a=a+sizeof(synchronise);
+  
 }
 
 void configClean() {
@@ -85,11 +93,45 @@ void configClean() {
   EEPROM.put(a, xversion);
 }
 
+int readTemp(int pin) {  // get the temperature and convert it to celsius
+  int temp = analogRead(pin);
+  return temp * tempMul + tempAdd;
+}
+
+void printStatus() {
+  if (active0) {
+    Serial.print("TEMP0:");
+    Serial.print(temp0);
+    Serial.print(",FAN0:");
+    Serial.print(fanSpeed0);
+  }
+  if (active1) {
+    Serial.print(",TEMP1:");
+    Serial.print(temp1);
+    Serial.print(",FAN1:");
+    Serial.print(fanSpeed1);
+  }
+  if (active2) {
+    Serial.print(",TEMP2:");
+    Serial.print(temp2);
+    Serial.print(",FAN2:");
+    Serial.print(fanSpeed2);
+  }
+  Serial.print(",WARN:");
+  Serial.print(warn);
+  Serial.print("/");
+  Serial.print(testWarn);
+  Serial.print(",ALERTS:");
+  Serial.print(alerts);
+  Serial.println();
+}
+
 void save() {
   int a = 0;
   int xversion = EE_VERSION;
   EEPROM.put(a, xversion);
   a=a+sizeof(xversion);
+  // V1
   EEPROM.put(a,active0);
   a=a+sizeof(active0);
   EEPROM.put(a,active1);
@@ -114,9 +156,17 @@ void save() {
   a=a+sizeof(serialEcho);
   EEPROM.put(a,monitorOn);
   a=a+sizeof(monitorOn);
+  // V2
   EEPROM.put(a,prompt);
   a=a+sizeof(prompt);
+  EEPROM.put(a,synchronise);
+  a=a+sizeof(synchronise);
   
+}
+
+void printPrompt() {
+  if (monitorOn || !serialEcho) return;
+  Serial.print(prompt);
 }
 
 void setup() {
@@ -188,6 +238,13 @@ void loop() {
      if (fanSpeed2 < 0) fanSpeed2 = 0;
    }
 
+   if (synchronise) {
+     int m = max( max(fanSpeed0, fanSpeed1), fanSpeed2);
+     if (active0) fanSpeed0 = m;
+     if (active1) fanSpeed1 = m;
+     if (active2) fanSpeed2 = m;
+   }
+   
    warn = false;
    if(testWarn > 0 || temp0  > tempMax || temp1 > tempMax || temp2 > tempMax) {        // if temp is higher than tempMax
     if (testWarn == 0) alerts++;
@@ -223,27 +280,46 @@ void loop() {
        if (inputString == "") {
          // ignore empty lines
        } else
-       if (inputString == "sensor") {
-         Serial.print("tempMul:");
-         Serial.print(tempMul);
-         Serial.print(",tempAdd:");
+       if (inputString == "config") {
+        Serial.print("active0: ");
+        Serial.println(active0);
+        
+        Serial.print("active1: ");
+        Serial.println(active1);
+
+        Serial.print("active2: ");
+        Serial.println(active2);
+
+         Serial.print("tempMul: ");
+         Serial.println(tempMul);
+         Serial.print("tempAdd: ");
          Serial.println(tempAdd);
-       } else
-       if (inputString == "boundaries") {
-        Serial.print("tempMin:");
-        Serial.print(tempMin);
-        Serial.print(",tempMax:");
+         
+        Serial.print("tempMin: ");
+        Serial.println(tempMin);
+        Serial.print("tempMax: ");
         Serial.println(tempMax);
-       } else
-       if (inputString == "fan") {
-        Serial.print("fanAdd:");
-        Serial.print(fanAdd);
-        Serial.print(",fanSleep:");
+        
+        Serial.print("fanAdd: ");
+        Serial.println(fanAdd);
+        Serial.print("fanSleep :");
         Serial.println(fanSleep);
-       } else
-       if (inputString == "delay") {
+
         Serial.print("delay:");
         Serial.println(delayTime);
+        
+        Serial.print("synchronise: ");
+        Serial.println(synchronise);
+        
+        Serial.print("prompt: ");
+        Serial.println(prompt);
+        
+        Serial.print("echo: ");
+        Serial.println(serialEcho);
+
+        Serial.print("monitor: ");
+        Serial.println(monitorOn);
+
        } else
        if (inputString == "alerts.clean") {
         alerts = 0;
@@ -320,6 +396,10 @@ void loop() {
          testWarn = val.toInt();
          Serial.println("ok");
        } else
+       if (key == "synchronise") {
+         synchronise = val == "true";
+         Serial.println("ok");
+       } else
        if (key == "monitor") {
          monitorOn = val == "true";
          Serial.println("ok");
@@ -369,39 +449,6 @@ void loop() {
    
    ledOn = !ledOn;
    delay(delayTime);
-}
-
-void printPrompt() {
-  if (monitorOn || !serialEcho) return;
-  Serial.print(prompt);
-  Serial.print("$ ");
-
-}
-void printStatus() {
-  Serial.print("TEMP0:");
-  Serial.print(temp0);
-  Serial.print(",FAN0:");
-  Serial.print(fanSpeed0);
-  Serial.print(",TEMP1:");
-  Serial.print(temp1);
-  Serial.print(",FAN1:");
-  Serial.print(fanSpeed1);
-  Serial.print(",TEMP2:");
-  Serial.print(temp2);
-  Serial.print(",FAN2:");
-  Serial.print(fanSpeed2);
-  Serial.print(",WARN:");
-  Serial.print(warn);
-  Serial.print("/");
-  Serial.print(testWarn);
-  Serial.print(",ALERTS:");
-  Serial.print(alerts);
-  Serial.println();
-}
-
-int readTemp(int pin) {  // get the temperature and convert it to celsius
-  int temp = analogRead(pin);
-  return temp * tempMul + tempAdd;
 }
 
 void serialEvent() {
